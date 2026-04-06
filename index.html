@@ -5,274 +5,268 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BioQuiz — Jeu</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     :root {
-      --bg: #08090e; --bg2: #0f1117; --surface: #161b27;
-      --border: rgba(255,255,255,0.07); --accent: #f0b429;
-      --green: #34d399; --red: #f87171; --blue: #60a5fa;
-      --text: #f1f5f9; --muted: #64748b; --r: 14px;
+      --bg:#08090e; --bg2:#0f1117; --surface:#161b27;
+      --border:rgba(255,255,255,0.07); --accent:#f0b429;
+      --green:#34d399; --red:#f87171; --blue:#60a5fa;
+      --text:#f1f5f9; --muted:#64748b; --r:14px;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
-    body::after { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 999; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:999;}
+
+    /* COUNTDOWN */
+    #countdown-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,14,0.92);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+    #countdown-overlay.active{display:flex;}
+    .cd-label{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:2px;}
+    .cd-number{font-family:'Syne',sans-serif;font-size:7rem;font-weight:900;color:var(--green);line-height:1;text-shadow:0 0 40px rgba(52,211,153,0.5);animation:cdPop 1s ease forwards;}
+    @keyframes cdPop{0%{transform:scale(1.4);opacity:0;}30%{transform:scale(1);opacity:1;}80%{transform:scale(1);opacity:1;}100%{transform:scale(0.8);opacity:0;}}
+    .cd-sub{font-size:0.88rem;color:var(--muted);}
+
+    /* MODAL PSEUDO */
+    #modal-pseudo{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:400;align-items:center;justify-content:center;padding:20px;}
+    #modal-pseudo.active{display:flex;}
+    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 28px;width:100%;max-width:360px;}
+    .modal-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;margin-bottom:6px;}
+    .modal-sub{color:var(--muted);font-size:0.85rem;margin-bottom:24px;}
+    .modal-actions{display:flex;gap:10px;margin-top:16px;}
+    .btn-modal-save{flex:1;padding:12px;background:var(--accent);color:#000;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;transition:all 0.18s;}
+    .btn-modal-save:hover{background:#e0a820;transform:translateY(-1px);}
+    .btn-modal-cancel{padding:12px 18px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.9rem;cursor:pointer;transition:all 0.18s;}
+    .btn-modal-cancel:hover{border-color:var(--red);color:var(--red);}
 
     /* LOGIN */
-    #screen-login { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 200; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
-    #screen-login.active { display: flex; }
-    .login-box { width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 36px 32px; margin: auto; }
-    .login-logo { font-family: 'Syne', sans-serif; font-weight: 900; font-size: 2rem; letter-spacing: -1px; text-align: center; margin-bottom: 6px; }
-    .login-logo em { color: var(--accent); font-style: normal; }
-    .login-sub { text-align: center; color: var(--muted); font-size: 0.88rem; margin-bottom: 28px; }
-    .auth-tabs { display: flex; background: var(--bg); border-radius: 10px; padding: 4px; margin-bottom: 24px; gap: 4px; }
-    .auth-tab { flex: 1; padding: 9px; border: none; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; background: transparent; color: var(--muted); transition: all 0.2s; }
-    .auth-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
-    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-    .field label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
-    .field input { background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 16px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.2s; width: 100%; }
-    .field input:focus { border-color: var(--accent); }
-    .field input::placeholder { color: var(--muted); opacity: 0.5; }
-    .btn-auth { margin-top: 8px; width: 100%; padding: 14px; background: var(--accent); color: #000; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.18s; }
-    .btn-auth:hover:not(:disabled) { background: #e0a820; transform: translateY(-2px); }
-    .btn-auth:disabled { opacity: 0.5; cursor: not-allowed; }
-    .auth-msg { padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-top: 12px; display: none; text-align: center; }
-    .auth-msg.visible { display: block; }
-    .auth-msg.error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: var(--red); }
-    .auth-msg.success { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25); color: var(--green); }
-
-    /* COUNTDOWN OVERLAY */
-    #countdown-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(8,9,14,0.92);
-      backdrop-filter: blur(8px);
-      z-index: 500;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 16px;
-    }
-    #countdown-overlay.active { display: flex; }
-    .cd-label {
-      font-family: 'Syne', sans-serif;
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 2px;
-    }
-    .cd-number {
-      font-family: 'Syne', sans-serif;
-      font-size: 7rem;
-      font-weight: 900;
-      color: var(--green);
-      line-height: 1;
-      text-shadow: 0 0 40px rgba(52,211,153,0.5);
-      animation: cdPop 1s ease forwards;
-    }
-    @keyframes cdPop {
-      0%   { transform: scale(1.4); opacity: 0; }
-      30%  { transform: scale(1);   opacity: 1; }
-      80%  { transform: scale(1);   opacity: 1; }
-      100% { transform: scale(0.8); opacity: 0; }
-    }
-    .cd-sub {
-      font-size: 0.88rem;
-      color: var(--muted);
-    }
+    #screen-login{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+    #screen-login.active{display:flex;}
+    .login-box{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px 32px;margin:auto;}
+    .login-logo{font-family:'Syne',sans-serif;font-weight:900;font-size:2rem;letter-spacing:-1px;text-align:center;margin-bottom:6px;}
+    .login-sub{text-align:center;color:var(--muted);font-size:0.88rem;margin-bottom:28px;}
+    .auth-tabs{display:flex;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:24px;gap:4px;}
+    .auth-tab{flex:1;padding:9px;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all 0.2s;}
+    .auth-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.3);}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+    .field label{font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);}
+    .field input{background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;transition:border-color 0.2s;width:100%;}
+    .field input:focus{border-color:var(--accent);}
+    .field input::placeholder{color:var(--muted);opacity:0.5;}
+    .btn-auth{margin-top:8px;width:100%;padding:14px;background:var(--accent);color:#000;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;cursor:pointer;transition:all 0.18s;}
+    .btn-auth:hover:not(:disabled){background:#e0a820;transform:translateY(-2px);}
+    .btn-auth:disabled{opacity:0.5;cursor:not-allowed;}
+    .auth-msg{padding:10px 14px;border-radius:8px;font-size:0.85rem;margin-top:12px;display:none;text-align:center;}
+    .auth-msg.visible{display:block;}
+    .auth-msg.error{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);color:var(--red);}
+    .auth-msg.success{background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);color:var(--green);}
 
     /* HEADER */
-    header { display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; border-bottom: 1px solid var(--border); background: rgba(8,9,14,0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100; }
-    .logo { font-family: 'Syne', sans-serif; font-weight: 900; font-size: 1.25rem; letter-spacing: -0.5px; }
-    .logo em { color: var(--accent); font-style: normal; }
-    .q-counter { font-size: 0.82rem; color: var(--muted); font-weight: 500; }
-    .player-pill { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); padding: 7px 14px; border-radius: 99px; font-size: 0.85rem; }
-    .player-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 2s infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
-    .logout-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.18s; }
-    .logout-btn:hover { border-color: var(--red); color: var(--red); }
+    header{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);background:rgba(8,9,14,0.8);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
+    .logo{font-family:'Syne',sans-serif;font-weight:900;font-size:1.25rem;letter-spacing:-0.5px;}
+    .q-counter{font-size:0.82rem;color:var(--muted);font-weight:500;}
+    .player-pill{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);padding:7px 14px;border-radius:99px;font-size:0.85rem;cursor:pointer;transition:border-color 0.2s;}
+    .player-pill:hover{border-color:var(--accent);}
+    .player-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 2s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+    .logout-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:8px;font-size:0.78rem;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.18s;}
+    .logout-btn:hover{border-color:var(--red);color:var(--red);}
 
     /* MAIN */
-    main { flex: 1; display: grid; grid-template-columns: 1fr 280px; gap: 28px; max-width: 1100px; width: 100%; margin: 0 auto; padding: 32px 24px; }
-    @media (max-width: 760px) { main { grid-template-columns: 1fr; padding: 20px 16px; } }
+    main{flex:1;display:grid;grid-template-columns:1fr 280px;gap:28px;max-width:1100px;width:100%;margin:0 auto;padding:32px 24px;}
+    @media(max-width:760px){main{grid-template-columns:1fr;padding:20px 16px;}}
 
     /* ATTENTE */
-    #screen-wait { grid-column: 1 / -1; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; min-height: 60vh; }
-    #screen-wait.active { display: flex; }
-    .wait-ring { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin 1.2s linear infinite; margin-bottom: 28px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .wait-title { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; }
-    .wait-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 32px; }
-    .players-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 500px; }
-    .p-chip { background: var(--surface); border: 1px solid var(--border); padding: 6px 14px; border-radius: 99px; font-size: 0.82rem; color: var(--muted); }
-    .p-chip.me { border-color: var(--accent); color: var(--accent); background: rgba(240,180,41,0.08); }
+    #screen-wait{grid-column:1/-1;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 20px;min-height:60vh;}
+    #screen-wait.active{display:flex;}
+    .wait-ring{width:80px;height:80px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin 1.2s linear infinite;margin-bottom:28px;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .wait-title{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:8px;}
+    .wait-sub{color:var(--muted);font-size:0.95rem;margin-bottom:32px;}
+    .players-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:500px;}
+    .p-chip{background:var(--surface);border:1px solid var(--border);padding:6px 14px;border-radius:99px;font-size:0.82rem;color:var(--muted);}
+    .p-chip.me{border-color:var(--accent);color:var(--accent);background:rgba(240,180,41,0.08);}
 
     /* JEU */
-    #screen-game { display: none; }
-    #screen-game.active { display: contents; }
-    .progress-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
-    .progress-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--red)); border-radius: 2px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
-    .progress-num { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
-    .q-tag { display: inline-flex; background: rgba(240,180,41,0.1); border: 1px solid rgba(240,180,41,0.2); color: var(--accent); padding: 5px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 500; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .q-title { font-family: 'Syne', sans-serif; font-size: clamp(1.1rem, 3vw, 1.5rem); font-weight: 700; line-height: 1.45; margin-bottom: 28px; }
-    .flash { padding: 14px 18px; border-radius: var(--r); font-weight: 500; font-size: 0.95rem; margin-bottom: 20px; display: none; align-items: center; gap: 10px; animation: slideIn 0.25s ease; }
-    .flash.active { display: flex; }
-    .flash.correct { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.25); color: var(--green); }
-    .flash.wrong { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.25); color: var(--red); }
-    .flash.wait { background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.25); color: var(--blue); }
-    @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
-    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 500px) { .options { grid-template-columns: 1fr; } }
-    .opt { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r); padding: 16px 18px; display: flex; align-items: flex-start; gap: 14px; cursor: pointer; transition: all 0.18s; text-align: left; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.93rem; line-height: 1.4; }
-    .opt:hover:not(:disabled) { border-color: rgba(240,180,41,0.4); background: rgba(240,180,41,0.05); transform: translateY(-2px); }
-    .opt:disabled { cursor: not-allowed; opacity: 0.55; }
-    .opt.correct { border-color: var(--green) !important; background: rgba(52,211,153,0.1) !important; opacity: 1 !important; }
-    .opt.wrong { border-color: var(--red) !important; background: rgba(248,113,113,0.08) !important; opacity: 1 !important; }
-    .opt-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.06); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; flex-shrink: 0; transition: background 0.18s; }
-    .opt.correct .opt-badge { background: var(--green); color: #000; }
-    .opt.wrong .opt-badge { background: var(--red); color: #fff; }
+    #screen-game{display:none;}
+    #screen-game.active{display:contents;}
+    .progress-wrap{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+    .progress-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--red));border-radius:2px;transition:width 0.6s cubic-bezier(.4,0,.2,1);}
+    .progress-num{font-size:0.78rem;color:var(--muted);white-space:nowrap;}
+
+    /* TIMER */
+    .timer-wrap{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+    .timer-track{flex:1;height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;}
+    .timer-fill{height:100%;border-radius:4px;background:var(--green);transition:width 1s linear,background 0.5s;}
+    .timer-fill.warn{background:var(--accent);}
+    .timer-fill.danger{background:var(--red);}
+    .timer-num{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;min-width:32px;text-align:right;color:var(--green);transition:color 0.5s;}
+    .timer-num.warn{color:var(--accent);}
+    .timer-num.danger{color:var(--red);}
+
+    .q-tag{display:inline-flex;background:rgba(240,180,41,0.1);border:1px solid rgba(240,180,41,0.2);color:var(--accent);padding:5px 12px;border-radius:99px;font-size:0.75rem;font-weight:500;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;}
+    .q-title{font-family:'Syne',sans-serif;font-size:clamp(1.1rem,3vw,1.5rem);font-weight:700;line-height:1.45;margin-bottom:28px;}
+    .flash{padding:14px 18px;border-radius:var(--r);font-weight:500;font-size:0.95rem;margin-bottom:20px;display:none;align-items:center;gap:10px;animation:slideIn 0.25s ease;}
+    .flash.active{display:flex;}
+    .flash.correct{background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.25);color:var(--green);}
+    .flash.wrong{background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.25);color:var(--red);}
+    .flash.wait{background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.25);color:var(--blue);}
+    @keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+    .options{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media(max-width:500px){.options{grid-template-columns:1fr;}}
+    .opt{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:16px 18px;display:flex;align-items:flex-start;gap:14px;cursor:pointer;transition:all 0.18s;text-align:left;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.93rem;line-height:1.4;}
+    .opt:hover:not(:disabled){border-color:rgba(240,180,41,0.4);background:rgba(240,180,41,0.05);transform:translateY(-2px);}
+    .opt:disabled{cursor:not-allowed;opacity:0.55;}
+    .opt.correct{border-color:var(--green)!important;background:rgba(52,211,153,0.1)!important;opacity:1!important;}
+    .opt.wrong{border-color:var(--red)!important;background:rgba(248,113,113,0.08)!important;opacity:1!important;}
+    .opt-badge{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,0.06);font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;flex-shrink:0;}
+    .opt.correct .opt-badge{background:var(--green);color:#000;}
+    .opt.wrong .opt-badge{background:var(--red);color:#fff;}
 
     /* TEXTE LIBRE */
-    .texte-wrap { display: flex; flex-direction: column; gap: 12px; }
-    .texte-input { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r); padding: 14px 16px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.93rem; line-height: 1.6; resize: vertical; min-height: 100px; outline: none; transition: border-color 0.2s; }
-    .texte-input:focus { border-color: var(--accent); }
-    .texte-input:disabled { opacity: 0.55; cursor: not-allowed; }
-    .texte-indice { font-size: 0.8rem; color: var(--muted); background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
-    .btn-submit { align-self: flex-start; padding: 12px 28px; background: var(--accent); color: #000; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: all 0.18s; }
-    .btn-submit:hover:not(:disabled) { background: #e0a820; transform: translateY(-2px); }
-    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .texte-wrap{display:flex;flex-direction:column;gap:12px;}
+    .texte-input{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.93rem;line-height:1.6;resize:vertical;min-height:100px;outline:none;transition:border-color 0.2s;}
+    .texte-input:focus{border-color:var(--accent);}
+    .texte-input:disabled{opacity:0.55;cursor:not-allowed;}
+    .texte-indice{font-size:0.8rem;color:var(--muted);background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:8px 12px;}
+    .btn-submit{align-self:flex-start;padding:12px 28px;background:var(--accent);color:#000;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;transition:all 0.18s;}
+    .btn-submit:hover:not(:disabled){background:#e0a820;transform:translateY(-2px);}
+    .btn-submit:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
 
     /* LEADERBOARD */
-    .leaderboard-col { display: flex; flex-direction: column; }
-    .lb-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; position: sticky; top: 80px; }
-    .lb-title { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 16px; }
-    .lb-list { display: flex; flex-direction: column; gap: 6px; }
-    .lb-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.025); }
-    .lb-row.me { background: rgba(240,180,41,0.08); border: 1px solid rgba(240,180,41,0.15); }
-    .lb-rank { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.85rem; color: var(--muted); width: 20px; text-align: center; flex-shrink: 0; }
-    .lb-row:nth-child(1) .lb-rank { color: #ffd700; }
-    .lb-row:nth-child(2) .lb-rank { color: #c0c0c0; }
-    .lb-row:nth-child(3) .lb-rank { color: #cd7f32; }
-    .lb-name { flex: 1; font-size: 0.88rem; font-weight: 500; }
-    .lb-pts { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.88rem; color: var(--accent); }
+    .leaderboard-col{display:flex;flex-direction:column;}
+    .lb-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;position:sticky;top:80px;}
+    .lb-title{font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px;}
+    .lb-list{display:flex;flex-direction:column;gap:6px;}
+    .lb-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.025);}
+    .lb-row.me{background:rgba(240,180,41,0.08);border:1px solid rgba(240,180,41,0.15);}
+    .lb-rank{font-family:'Syne',sans-serif;font-weight:800;font-size:0.85rem;color:var(--muted);width:20px;text-align:center;flex-shrink:0;}
+    .lb-row:nth-child(1) .lb-rank{color:#ffd700;}
+    .lb-row:nth-child(2) .lb-rank{color:#c0c0c0;}
+    .lb-row:nth-child(3) .lb-rank{color:#cd7f32;}
+    .lb-name{flex:1;font-size:0.88rem;font-weight:500;}
+    .lb-pts{font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:var(--accent);}
 
     /* FIN */
-    #screen-end { grid-column: 1 / -1; display: none; flex-direction: column; align-items: center; text-align: center; padding: 60px 20px; }
-    #screen-end.active { display: flex; }
-    .end-trophy { font-size: 4rem; margin-bottom: 20px; animation: bounce 0.6s ease; }
-    @keyframes bounce { 0%,100%{transform:translateY(0)} 40%{transform:translateY(-16px)} }
-    .end-title { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 900; margin-bottom: 6px; }
-    .end-sub { color: var(--muted); margin-bottom: 40px; }
-    .podium { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 8px; }
-    .podium-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--border); animation: slideIn 0.4s ease both; }
-    .podium-row:nth-child(1) { border-color: rgba(255,215,0,0.3); background: rgba(255,215,0,0.06); animation-delay: 0.1s; }
-    .podium-row:nth-child(2) { animation-delay: 0.2s; }
-    .podium-row:nth-child(3) { animation-delay: 0.3s; }
-    .podium-medal { font-size: 1.4rem; }
-    .podium-name { flex: 1; font-weight: 500; }
-    .podium-score { font-family: 'Syne', sans-serif; font-weight: 800; color: var(--accent); font-size: 1.1rem; }
+    #screen-end{grid-column:1/-1;display:none;flex-direction:column;align-items:center;text-align:center;padding:60px 20px;}
+    #screen-end.active{display:flex;}
+    .end-trophy{font-size:4rem;margin-bottom:20px;animation:bounce 0.6s ease;}
+    @keyframes bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-16px)}}
+    .end-title{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:900;margin-bottom:6px;}
+    .end-sub{color:var(--muted);margin-bottom:40px;}
+    .podium{width:100%;max-width:420px;display:flex;flex-direction:column;gap:8px;}
+    .podium-row{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:var(--r);background:var(--surface);border:1px solid var(--border);animation:slideIn 0.4s ease both;}
+    .podium-row:nth-child(1){border-color:rgba(255,215,0,0.3);background:rgba(255,215,0,0.06);animation-delay:0.1s;}
+    .podium-row:nth-child(2){animation-delay:0.2s;}
+    .podium-row:nth-child(3){animation-delay:0.3s;}
+    .podium-medal{font-size:1.4rem;}
+    .podium-name{flex:1;font-weight:500;}
+    .podium-score{font-family:'Syne',sans-serif;font-weight:800;color:var(--accent);font-size:1.1rem;}
   </style>
 </head>
 <body>
 
-  <!-- COUNTDOWN OVERLAY -->
-  <div id="countdown-overlay">
-    <div class="cd-label">Prochaine question dans</div>
-    <div class="cd-number" id="cdNumber">3</div>
-    <div class="cd-sub">Tiens-toi prêt !</div>
-  </div>
+<!-- COUNTDOWN -->
+<div id="countdown-overlay">
+  <div class="cd-label">Prochaine question dans</div>
+  <div class="cd-number" id="cdNumber">3</div>
+  <div class="cd-sub">Tiens-toi prêt !</div>
+</div>
 
-  <!-- LOGIN -->
-  <div id="screen-login" class="active">
-    <div class="login-box">
-      <div class="login-logo"><span style="color:var(--green)">Bio</span>Quiz</div>
-      <div class="login-sub">Rejoins la partie</div>
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tabConnexion" onclick="switchTab('connexion')">Se connecter</button>
-        <button class="auth-tab" id="tabInscription" onclick="switchTab('inscription')">S'inscrire</button>
-      </div>
-      <div id="formConnexion">
-        <div class="field">
-          <label>Email</label>
-          <input type="email" id="loginEmail" placeholder="ton@email.com" autocomplete="email" />
-        </div>
-        <div class="field">
-          <label>Mot de passe</label>
-          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
-        </div>
-        <button class="btn-auth" onclick="login()">Se connecter →</button>
-      </div>
-      <div id="formInscription" style="display:none">
-        <div class="field">
-          <label>Prénom</label>
-          <input type="text" id="regPrenom" placeholder="Ton prénom" />
-        </div>
-        <div class="field">
-          <label>Email</label>
-          <input type="email" id="regEmail" placeholder="ton@email.com" />
-        </div>
-        <div class="field">
-          <label>Mot de passe</label>
-          <input type="password" id="regPassword" placeholder="Au moins 6 caractères" />
-        </div>
-        <div class="field">
-          <label>Confirmer le mot de passe</label>
-          <input type="password" id="regPassword2" placeholder="••••••••" />
-        </div>
-        <button class="btn-auth" onclick="inscrire()">Créer mon compte →</button>
-      </div>
-      <div class="auth-msg" id="authMsg"></div>
+<!-- MODAL PSEUDO -->
+<div id="modal-pseudo">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Modifier mon pseudo</div>
+    <div class="modal-sub">Ce nom s'affichera dans le classement</div>
+    <div class="field">
+      <label>Nouveau pseudo</label>
+      <input type="text" id="inputPseudo" placeholder="Ton prénom ou pseudo" maxlength="20" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="fermerModalPseudo()">Annuler</button>
+      <button class="btn-modal-save" onclick="sauverPseudo()">Sauvegarder →</button>
     </div>
   </div>
+</div>
 
-  <!-- HEADER -->
-  <header id="appHeader" style="display:none">
-    <div class="logo"><span style="color:var(--green)">Bio</span>Quiz</div>
-    <div class="q-counter" id="hdrCounter">—</div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="player-pill">
-        <span class="player-dot"></span>
-        <span id="hdrPlayer">—</span>
-      </div>
-      <button class="logout-btn" onclick="logout()">Déco</button>
+<!-- LOGIN -->
+<div id="screen-login" class="active">
+  <div class="login-box">
+    <div class="login-logo"><span style="color:var(--green)">Bio</span>Quiz</div>
+    <div class="login-sub">Rejoins la partie</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabConnexion" onclick="switchTab('connexion')">Se connecter</button>
+      <button class="auth-tab" id="tabInscription" onclick="switchTab('inscription')">S'inscrire</button>
     </div>
-  </header>
+    <div id="formConnexion">
+      <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="ton@email.com" autocomplete="email" /></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" /></div>
+      <button class="btn-auth" onclick="login()">Se connecter →</button>
+    </div>
+    <div id="formInscription" style="display:none">
+      <div class="field"><label>Prénom</label><input type="text" id="regPrenom" placeholder="Ton prénom" /></div>
+      <div class="field"><label>Email</label><input type="email" id="regEmail" placeholder="ton@email.com" /></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="regPassword" placeholder="Au moins 6 caractères" /></div>
+      <div class="field"><label>Confirmer</label><input type="password" id="regPassword2" placeholder="••••••••" /></div>
+      <button class="btn-auth" onclick="inscrire()">Créer mon compte →</button>
+    </div>
+    <div class="auth-msg" id="authMsg"></div>
+  </div>
+</div>
 
-  <!-- MAIN -->
-  <main id="appMain" style="display:none">
-    <div id="screen-wait">
-      <div class="wait-ring"></div>
-      <div class="wait-title">En attente de l'admin…</div>
-      <div class="wait-sub">La partie va bientôt commencer. Tiens-toi prêt !</div>
-      <div class="players-chips" id="playersChips"></div>
+<!-- HEADER -->
+<header id="appHeader" style="display:none">
+  <div class="logo"><span style="color:var(--green)">Bio</span>Quiz</div>
+  <div class="q-counter" id="hdrCounter">—</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="player-pill" onclick="ouvrirModalPseudo()" title="Modifier mon pseudo">
+      <span class="player-dot"></span>
+      <span id="hdrPlayer">—</span>
+      <span style="font-size:0.7rem;color:var(--muted)">✏️</span>
     </div>
-    <div id="screen-game">
-      <div class="game-col">
-        <div class="progress-wrap">
-          <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-          <span class="progress-num" id="progressNum">0 / 0</span>
-        </div>
-        <div class="q-tag" id="qTag">—</div>
-        <div class="q-title" id="qText">—</div>
-        <div class="flash" id="flash"></div>
-        <div class="options" id="optionsGrid"></div>
+    <button class="logout-btn" onclick="logout()">Déco</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main id="appMain" style="display:none">
+  <div id="screen-wait">
+    <div class="wait-ring"></div>
+    <div class="wait-title">En attente de l'admin…</div>
+    <div class="wait-sub">La partie va bientôt commencer. Tiens-toi prêt !</div>
+    <div class="players-chips" id="playersChips"></div>
+  </div>
+
+  <div id="screen-game">
+    <div class="game-col">
+      <div class="progress-wrap">
+        <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <span class="progress-num" id="progressNum">0 / 0</span>
       </div>
-      <div class="leaderboard-col">
-        <div class="lb-card">
-          <div class="lb-title">🏆 Classement</div>
-          <div class="lb-list" id="lbList"></div>
-        </div>
+      <div class="timer-wrap">
+        <div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+        <span class="timer-num" id="timerNum">15</span>
+      </div>
+      <div class="q-tag" id="qTag">—</div>
+      <div class="q-title" id="qText">—</div>
+      <div class="flash" id="flash"></div>
+      <div class="options" id="optionsGrid"></div>
+    </div>
+    <div class="leaderboard-col">
+      <div class="lb-card">
+        <div class="lb-title">🏆 Classement</div>
+        <div class="lb-list" id="lbList"></div>
       </div>
     </div>
-    <div id="screen-end">
-      <div class="end-trophy">🏆</div>
-      <div class="end-title">Partie terminée !</div>
-      <div class="end-sub">Voici le classement final</div>
-      <div class="podium" id="podium"></div>
-    </div>
-  </main>
+  </div>
+
+  <div id="screen-end">
+    <div class="end-trophy">🏆</div>
+    <div class="end-title">Partie terminée !</div>
+    <div class="end-sub">Voici le classement final</div>
+    <div class="podium" id="podium"></div>
+  </div>
+</main>
 
 <script>
 // ════════════════════════════════════════════════════════════════
@@ -282,113 +276,116 @@ var MANCHES = {
   1: {
     nom: "Culture Generale & Sciences",
     questions: [
-      { id:1,  type:"qcm", cat:"Logique / Maths",   titre:"Le labyrinthe des nombres",   q:"Si trois entiers consecutifs ont une somme de 51, quels sont-ils ?",                                        opts:["16, 17, 18","15, 16, 17","17, 18, 19","14, 15, 16"], rep:"A" },
-      { id:2,  type:"qcm", cat:"Logique / Maths",   titre:"Le triangle impossible",        q:"Dans un triangle ABC, si AB = AC et l'angle B = 70 degres, quel est l'angle C ?",                         opts:["70 deg","40 deg","50 deg","60 deg"], rep:"A" },
-      { id:3,  type:"qcm", cat:"Logique pure",       titre:"L'enigme des paradoxes",        q:"Paul dit : Je ne mens jamais. Si cette phrase est vraie mais Paul ment parfois, la phrase est :",          opts:["Faite pour creer un paradoxe","Vraie","Faussee","Impossible"], rep:"A" },
-      { id:4,  type:"qcm", cat:"Litterature",        titre:"La bibliotheque oubliee",       q:"Quel auteur a ecrit L'Etranger ?",                                                                         opts:["Albert Camus","Victor Hugo","Emile Zola","Jean-Paul Sartre"], rep:"A" },
-      { id:5,  type:"qcm", cat:"Danse / Art",        titre:"La danse du vent",               q:"Le Pas de bourree appartient a quelle danse ?",                                                            opts:["Valse","Ballet classique","Tango","Salsa"], rep:"B" },
-      { id:6,  type:"qcm", cat:"Logique / Maths",   titre:"Le coffre du professeur",        q:"Le code du coffre est un nombre a 3 chiffres, tous differents, dont la somme vaut 15. Lequel est correct ?", opts:["678","555","666","777"], rep:"A" },
-      { id:7,  type:"qcm", cat:"Physique",           titre:"Le circuit infernal",             q:"Un piston comprime un gaz adiabatiquement. Si le volume diminue de moitie, la temperature :",            opts:["Double approximativement","Reste constante","Diminue","N'est pas affectee"], rep:"A" },
-      { id:8,  type:"qcm", cat:"Physique nucleaire", titre:"Le noyau cache",                 q:"Parmi ces particules, laquelle est la plus penetrante ?",                                                  opts:["Alpha","Beta","Gamma","Neutron"], rep:"C" },
-      { id:9,  type:"qcm", cat:"Biologie vegetale",  titre:"Le chloroplaste",                q:"Quel organite produit le glucose chez les plantes ?",                                                      opts:["Noyau","Chloroplaste","Mitochondrie","Vacuole"], rep:"B" },
-      { id:10, type:"qcm", cat:"Biologie cellulaire",titre:"L'enigme cellulaire",             q:"L'ADN est contenu principalement dans :",                                                                  opts:["Noyau","Mitochondrie","Ribosome","Cytoplasme"], rep:"A" },
-      { id:11, type:"qcm", cat:"Astronomie",         titre:"Le trou noir express",            q:"La vitesse de liberation a la surface d'un trou noir est :",                                              opts:["Moins que c","Egale a c","Plus que c","Zero"], rep:"B" },
-      { id:12, type:"qcm", cat:"Astronomie",         titre:"Le ballet des planetes",          q:"Selon la 3eme loi de Kepler, T2 est proportionnel a :",                                                   opts:["La masse de la planete","R3 (cube du rayon orbital)","La vitesse orbitale","La densite stellaire"], rep:"B" },
-      { id:13, type:"qcm", cat:"Chimie",             titre:"Le cristal du chaos",              q:"La solubilite du sel augmente avec :",                                                                    opts:["La pression","La temperature","La lumiere","Le pH"], rep:"B" },
-      { id:14, type:"qcm", cat:"Physique",           titre:"Le photon fugace",                 q:"E = h*nu relie :",                                                                                        opts:["Energie et masse","Energie et frequence","Frequence et longueur d'onde","Energie et temps"], rep:"B" },
-      { id:15, type:"qcm", cat:"Biologie",           titre:"Le clonage eclair",                q:"Le mecanisme de replication de l'ADN est :",                                                             opts:["Transcription","Replication","Traduction","Transformation"], rep:"B" },
-      { id:16, type:"qcm", cat:"Astronomie",         titre:"Le vent solaire",                  q:"Le vent solaire est compose de :",                                                                        opts:["Photons","Electrons et protons","Neutrons","Gluons"], rep:"B" },
-      { id:17, type:"qcm", cat:"Electromagnetisme",  titre:"Le fil de Faraday",                q:"Un conducteur se deplacant dans un champ magnetique subit :",                                            opts:["Une force electrique","Une force gravitationnelle","Une force nucleaire","Rien"], rep:"A" },
-      { id:18, type:"qcm", cat:"Societe / Art",      titre:"La culture generale",              q:"Quel pays est connu pour le festival de la Tomatina ?",                                                  opts:["Espagne","Italie","France","Portugal"], rep:"A" },
-      { id:19, type:"qcm", cat:"Fun",                titre:"Slogan du Parti Flambeau",         q:"Quel est le slogan officiel du Parti Flambeau ?",                                                        opts:["Ensemble pour un avenir meilleur","Ensemble faisons briller la BCPST","L'Afrique d'abord","La jeunesse au pouvoir"], rep:"B" }
+      {id:1,  type:"qcm", cat:"Logique / Maths",   titre:"Le labyrinthe des nombres",    q:"Si trois entiers consecutifs ont une somme de 51, quels sont-ils ?",                            opts:["16, 17, 18","15, 16, 17","17, 18, 19","14, 15, 16"],                                                              rep:"A"},
+      {id:2,  type:"qcm", cat:"Logique / Maths",   titre:"Le triangle impossible",         q:"Dans un triangle ABC, si AB = AC et l'angle B = 70 degres, quel est l'angle C ?",             opts:["70 deg","40 deg","50 deg","60 deg"],                                                                               rep:"A"},
+      {id:3,  type:"qcm", cat:"Logique pure",       titre:"L'enigme des paradoxes",         q:"Paul dit : Je ne mens jamais. Si cette phrase est vraie mais Paul ment parfois, elle est :",  opts:["Faite pour creer un paradoxe","Vraie","Faussee","Impossible"],                                                     rep:"A"},
+      {id:4,  type:"qcm", cat:"Litterature",        titre:"La bibliotheque oubliee",        q:"Quel auteur a ecrit L'Etranger ?",                                                            opts:["Albert Camus","Victor Hugo","Emile Zola","Jean-Paul Sartre"],                                                     rep:"A"},
+      {id:5,  type:"qcm", cat:"Danse / Art",        titre:"La danse du vent",               q:"Le Pas de bourree appartient a quelle danse ?",                                               opts:["Valse","Ballet classique","Tango","Salsa"],                                                                        rep:"B"},
+      {id:6,  type:"qcm", cat:"Logique / Maths",   titre:"Le coffre du professeur",        q:"Code a 3 chiffres tous differents dont la somme vaut 15. Lequel est correct ?",               opts:["678","555","666","777"],                                                                                           rep:"A"},
+      {id:7,  type:"qcm", cat:"Physique",           titre:"Le circuit infernal",            q:"Un piston comprime un gaz adiabatiquement. Si le volume diminue de moitie, la temperature :", opts:["Double approximativement","Reste constante","Diminue","N'est pas affectee"],                                      rep:"A"},
+      {id:8,  type:"qcm", cat:"Physique nucleaire", titre:"Le noyau cache",                 q:"Parmi ces particules, laquelle est la plus penetrante ?",                                     opts:["Alpha","Beta","Gamma","Neutron"],                                                                                  rep:"C"},
+      {id:9,  type:"qcm", cat:"Biologie vegetale",  titre:"Le chloroplaste",                q:"Quel organite produit le glucose chez les plantes ?",                                         opts:["Noyau","Chloroplaste","Mitochondrie","Vacuole"],                                                                   rep:"B"},
+      {id:10, type:"qcm", cat:"Biologie cellulaire",titre:"L'enigme cellulaire",            q:"L'ADN est contenu principalement dans :",                                                     opts:["Noyau","Mitochondrie","Ribosome","Cytoplasme"],                                                                    rep:"A"},
+      {id:11, type:"qcm", cat:"Astronomie",         titre:"Le trou noir express",           q:"La vitesse de liberation a la surface d'un trou noir est :",                                  opts:["Moins que c","Egale a c","Plus que c","Zero"],                                                                     rep:"B"},
+      {id:12, type:"qcm", cat:"Astronomie",         titre:"Le ballet des planetes",         q:"Selon la 3eme loi de Kepler, T2 est proportionnel a :",                                       opts:["La masse de la planete","R3 (cube du rayon orbital)","La vitesse orbitale","La densite stellaire"],                rep:"B"},
+      {id:13, type:"qcm", cat:"Chimie",             titre:"Le cristal du chaos",            q:"La solubilite du sel augmente avec :",                                                        opts:["La pression","La temperature","La lumiere","Le pH"],                                                               rep:"B"},
+      {id:14, type:"qcm", cat:"Physique",           titre:"Le photon fugace",               q:"E = h*nu relie :",                                                                            opts:["Energie et masse","Energie et frequence","Frequence et longueur d'onde","Energie et temps"],                       rep:"B"},
+      {id:15, type:"qcm", cat:"Biologie",           titre:"Le clonage eclair",              q:"Le mecanisme de replication de l'ADN est :",                                                  opts:["Transcription","Replication","Traduction","Transformation"],                                                       rep:"B"},
+      {id:16, type:"qcm", cat:"Astronomie",         titre:"Le vent solaire",                q:"Le vent solaire est compose de :",                                                            opts:["Photons","Electrons et protons","Neutrons","Gluons"],                                                              rep:"B"},
+      {id:17, type:"qcm", cat:"Electromagnetisme",  titre:"Le fil de Faraday",              q:"Un conducteur se deplacant dans un champ magnetique subit :",                                 opts:["Une force electrique","Une force gravitationnelle","Une force nucleaire","Rien"],                                   rep:"A"},
+      {id:18, type:"qcm", cat:"Societe / Art",      titre:"La culture generale",            q:"Quel pays est connu pour le festival de la Tomatina ?",                                       opts:["Espagne","Italie","France","Portugal"],                                                                            rep:"A"},
+      {id:19, type:"qcm", cat:"Fun",                titre:"Slogan du Parti Flambeau",       q:"Quel est le slogan officiel du Parti Flambeau ?",                                             opts:["Ensemble pour un avenir meilleur","Ensemble faisons briller la BCPST","L'Afrique d'abord","La jeunesse au pouvoir"], rep:"B"}
     ]
   },
   2: {
     nom: "INPHB & Le Flambeau",
     questions: [
-      { id:1,  type:"qcm", cat:"INPHB",    titre:"Creation de l'INPHB",    q:"En quelle annee l'INPHB a-t-il ete cree par la fusion de plusieurs grandes ecoles (ENSI, ENSA, EAC, ENSTP) ?", opts:["1990","1996","2000","1985"], rep:"B" },
-      { id:2,  type:"qcm", cat:"INPHB",    titre:"Siege de l'INPHB",       q:"Dans quelle ville de Cote d'Ivoire se situe le siege principal de l'INPHB ?",                                    opts:["Abidjan","Yamoussoukro","Bouake","San-Pedro"], rep:"B" },
-      { id:3,  type:"qcm", cat:"INPHB",    titre:"Campus historiques",      q:"Lequel de ces sites ne fait pas partie des campus historiques de l'INPHB ?",                                     opts:["Sud","Centre","Nord","Est"], rep:"D" },
-      { id:4,  type:"qcm", cat:"INPHB",    titre:"Ecole des agronomes",     q:"Quelle ecole de l'INPHB est chargee de la formation des agronomes ?",                                            opts:["ESM","ESA","ESI","ESCAE"], rep:"B" },
-      { id:5,  type:"qcm", cat:"INPHB",    titre:"Nombre de sites",         q:"Combien de sites compte l'INPHB ?",                                                                              opts:["3","4","5","2"], rep:"B" },
-      { id:6,  type:"qcm", cat:"Flambeau", titre:"Tete du mouvement",       q:"Qui est a la tete du mouvement Le Flambeau pour la presidence de l'ACPB ?",                                     opts:["Kone Mamadou","Coulibaly Mohamed","Traore Bakary","Diallo Moussa"], rep:"B" },
-      { id:7,  type:"qcm", cat:"Flambeau", titre:"Nom complet du candidat", q:"Quel est le nom complet exact du candidat du Flambeau ?",                                                        opts:["Coulibaly Mohamed Junior","Coulibaly Mohamed d'Abobo","Coulibaly Mohamed Dotehe Sakrou","Coulibaly Sakrou Mohamed"], rep:"C" },
-      { id:8,  type:"qcm", cat:"Flambeau", titre:"Etablissement de Mohamed",q:"De quel etablissement Mohamed est-il issu ?",                                                                    opts:["Lycee Classique","Groupe Scolaire Selodesir","College Saint Viateur","EMPT"], rep:"B" },
-      { id:9,  type:"qcm", cat:"Flambeau", titre:"Couleur preferee",        q:"Quelle est la couleur preferee de Mohamed, souvent associee a son dynamisme ?",                                 opts:["Le Bleu","Le Vert","Le Rouge","Le Noir"], rep:"C" },
-      { id:10, type:"qcm", cat:"Flambeau", titre:"Objectif du Flambeau",    q:"Quel est l'objectif principal du mouvement Le Flambeau pour la promotion BCPST ?",                              opts:["L'unite et la solidarite","La competition individuelle","Le changement des horaires","L'organisation de voyages"], rep:"A" }
+      {id:1,  type:"qcm", cat:"INPHB",    titre:"Creation de l'INPHB",     q:"En quelle annee l'INPHB a-t-il ete cree (ENSI, ENSA, EAC, ENSTP) ?",                  opts:["1990","1996","2000","1985"],                                                                                        rep:"B"},
+      {id:2,  type:"qcm", cat:"INPHB",    titre:"Siege de l'INPHB",        q:"Dans quelle ville se situe le siege principal de l'INPHB ?",                            opts:["Abidjan","Yamoussoukro","Bouake","San-Pedro"],                                                                      rep:"B"},
+      {id:3,  type:"qcm", cat:"INPHB",    titre:"Campus historiques",       q:"Lequel de ces sites ne fait pas partie des campus historiques de l'INPHB ?",            opts:["Sud","Centre","Nord","Est"],                                                                                        rep:"D"},
+      {id:4,  type:"qcm", cat:"INPHB",    titre:"Ecole des agronomes",      q:"Quelle ecole de l'INPHB forme les agronomes ?",                                         opts:["ESM","ESA","ESI","ESCAE"],                                                                                          rep:"B"},
+      {id:5,  type:"qcm", cat:"INPHB",    titre:"Nombre de sites",          q:"Combien de sites compte l'INPHB ?",                                                     opts:["3","4","5","2"],                                                                                                   rep:"B"},
+      {id:6,  type:"qcm", cat:"Flambeau", titre:"Tete du mouvement",        q:"Qui est a la tete du mouvement Le Flambeau pour la presidence de l'ACPB ?",             opts:["Kone Mamadou","Coulibaly Mohamed","Traore Bakary","Diallo Moussa"],                                                 rep:"B"},
+      {id:7,  type:"qcm", cat:"Flambeau", titre:"Nom complet du candidat",  q:"Quel est le nom complet exact du candidat du Flambeau ?",                               opts:["Coulibaly Mohamed Junior","Coulibaly Mohamed d'Abobo","Coulibaly Mohamed Dotehe Sakrou","Coulibaly Sakrou Mohamed"], rep:"C"},
+      {id:8,  type:"qcm", cat:"Flambeau", titre:"Etablissement de Mohamed", q:"De quel etablissement Mohamed est-il issu ?",                                           opts:["Lycee Classique","Groupe Scolaire Selodesir","College Saint Viateur","EMPT"],                                        rep:"B"},
+      {id:9,  type:"qcm", cat:"Flambeau", titre:"Couleur preferee",         q:"Quelle est la couleur preferee de Mohamed ?",                                           opts:["Le Bleu","Le Vert","Le Rouge","Le Noir"],                                                                           rep:"C"},
+      {id:10, type:"qcm", cat:"Flambeau", titre:"Objectif du Flambeau",     q:"Quel est l'objectif principal du mouvement Le Flambeau pour la promo BCPST ?",          opts:["L'unite et la solidarite","La competition individuelle","Le changement des horaires","L'organisation de voyages"],  rep:"A"}
     ]
   },
   3: {
     nom: "Connais-tu ta promo BCPST ?",
     questions: [
-      {
-        id:1, type:"texte", cat:"Elections", titre:"Les trois candidats",
-        q:"Citez le nom complet des trois candidats aux elections de la presidence (un par ligne).",
-        placeholder:"Candidat 1\nCandidat 2\nCandidat 3",
-        indice:"Minuscules acceptees. N'importe quel ordre. Un candidat par ligne.",
-        repTexte:[
-          { tokens:["amani","marc","aurel"] },
-          { tokens:["coulibaly","mohamed","dotehe","sakrou"] },
-          { tokens:["doudou","tabe","aurele"] }
-        ],
-        modeTexte:"trois_noms_complets"
-      },
-      {
-        id:2, type:"qcm", cat:"Promo BCPST", titre:"Effectif de la promotion",
-        q:"Quel est l'effectif exact des eleves en BCPST A et B ?",
-        opts:["A: 49 - B: 52","A: 52 - B: 49","A: 50 - B: 50","A: 45 - B: 55"], rep:"B"
-      },
-      {
-        id:3, type:"qcm", cat:"Promo BCPST", titre:"Anniversaire de la deleguee",
-        q:"A quelle date devons-nous preparer les bougies pour l'anniversaire de notre deleguee ?",
-        opts:["10 mars","12 mars","15 mars","20 mars"], rep:"B"
-      },
-      {
-        id:4, type:"qcm", cat:"Promo BCPST", titre:"Non-nationaux (nombre)",
-        q:"Combien de non-nationaux compte notre promotion ?",
-        opts:["3","4","5","6"], rep:"C"
-      },
-      {
-        id:5, type:"texte", cat:"Promo BCPST", titre:"Non-nationaux (noms)",
-        q:"Citez les 5 non-nationaux de la promotion (nom + au moins un prenom, un par ligne).",
-        placeholder:"Diallo Halimatou\nSall Hadja\n...",
-        indice:"Nom de famille + au moins un prenom suffit.",
-        repTexte:[
-          { tokens:["diallo","halimatou"] },
-          { tokens:["sall","hadja"] },
-          { tokens:["yahaya","hamissou"] },
-          { tokens:["guilavogui","koikoi"] },
-          { tokens:["bah","mahmoud"] }
-        ],
-        modeTexte:"cinq_noms"
-      },
-      {
-        id:6, type:"qcm", cat:"Familles", titre:"Famille de Bedia Nancy",
-        q:"Quelle famille a pour presidente Bedia Nancy Anne-Audrey Niamien ?",
-        opts:["DNA","Prestige","Jet Tomate","Aucune"], rep:"B"
-      },
-      {
-        id:7, type:"texte", cat:"Familles", titre:"President de DNA",
-        q:"Quel est le nom complet du president de la famille DNA ?",
-        placeholder:"Nom Prenom(s)",
-        indice:"Nom + au moins un prenom suffit.",
-        repTexte:[ { tokens:["laba","lauris"] } ],
-        modeTexte:"un_nom"
-      },
-      {
-        id:8, type:"texte", cat:"Familles", titre:"President de Jet Tomate",
-        q:"Quel est le nom complet du president de la famille Jet Tomate ?",
-        placeholder:"Nom Prenom(s)",
-        indice:"Nom + au moins un prenom suffit.",
-        repTexte:[ { tokens:["bosso","elysee"] } ],
-        modeTexte:"un_nom"
-      }
+      {id:1, type:"texte", cat:"Elections", titre:"Les trois candidats",
+       q:"Citez le nom complet des trois candidats aux elections de la presidence (un par ligne).",
+       placeholder:"Candidat 1\nCandidat 2\nCandidat 3",
+       indice:"Minuscules acceptees. N'importe quel ordre. Un candidat par ligne.",
+       repTexte:[{tokens:["amani","marc","aurel"]},{tokens:["coulibaly","mohamed","dotehe","sakrou"]},{tokens:["doudou","tabe","aurele"]}],
+       modeTexte:"trois_noms_complets"},
+      {id:2, type:"qcm", cat:"Promo BCPST", titre:"Effectif de la promotion",
+       q:"Quel est l'effectif exact des eleves en BCPST A et B ?",
+       opts:["A: 49 - B: 52","A: 52 - B: 49","A: 50 - B: 50","A: 45 - B: 55"], rep:"B"},
+      {id:3, type:"qcm", cat:"Promo BCPST", titre:"Anniversaire de la deleguee",
+       q:"A quelle date preparer les bougies pour l'anniversaire de notre deleguee ?",
+       opts:["10 mars","12 mars","15 mars","20 mars"], rep:"B"},
+      {id:4, type:"qcm", cat:"Promo BCPST", titre:"Non-nationaux (nombre)",
+       q:"Combien de non-nationaux compte notre promotion ?",
+       opts:["3","4","5","6"], rep:"C"},
+      {id:5, type:"texte", cat:"Promo BCPST", titre:"Non-nationaux (noms)",
+       q:"Citez les 5 non-nationaux de la promotion (nom + au moins un prenom, un par ligne).",
+       placeholder:"Diallo Halimatou\nSall Hadja\n...",
+       indice:"Nom de famille + au moins un prenom suffit.",
+       repTexte:[{tokens:["diallo","halimatou"]},{tokens:["sall","hadja"]},{tokens:["yahaya","hamissou"]},{tokens:["guilavogui","koikoi"]},{tokens:["bah","mahmoud"]}],
+       modeTexte:"cinq_noms"},
+      {id:6, type:"qcm", cat:"Familles", titre:"Famille de Bedia Nancy",
+       q:"Quelle famille a pour presidente Bedia Nancy Anne-Audrey Niamien ?",
+       opts:["DNA","Prestige","Jet Tomate","Aucune"], rep:"B"},
+      {id:7, type:"texte", cat:"Familles", titre:"President de DNA",
+       q:"Quel est le nom complet du president de la famille DNA ?",
+       placeholder:"Nom Prenom(s)", indice:"Nom + au moins un prenom suffit.",
+       repTexte:[{tokens:["laba","lauris"]}], modeTexte:"un_nom"},
+      {id:8, type:"texte", cat:"Familles", titre:"President de Jet Tomate",
+       q:"Quel est le nom complet du president de la famille Jet Tomate ?",
+       placeholder:"Nom Prenom(s)", indice:"Nom + au moins un prenom suffit.",
+       repTexte:[{tokens:["bosso","elysee"]}], modeTexte:"un_nom"}
     ]
   }
 };
 
 var LETTRES = ['A','B','C','D'];
 var ME = null;
+
+// ════════════════════════════════════════════════════════════════
+//  SUPABASE
+// ════════════════════════════════════════════════════════════════
+var SUPA_URL = 'https://tnitmphgkinzejjvfpys.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuaXRtcGhna2luemVqanZmcHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0ODAxOTAsImV4cCI6MjA5MTA1NjE5MH0.TePyh3OQxDfvBceCknLx4DKb5sLgemnuiBpMH3Do7rc';
+var sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+var _state = null;
+
+function defaultState() { return {statut:'attente', manche:1, scores:{}, joueurs:[]}; }
+function getState()      { return _state || defaultState(); }
+
+function rowToState(row) {
+  return {statut:row.statut||'attente', manche:row.manche||1, scores:row.scores||{}, joueurs:row.joueurs||[]};
+}
+
+async function saveState(s) {
+  _state = s;
+  var res = await sb.from('game_state').upsert({id:1, statut:s.statut, manche:s.manche||1, scores:s.scores, joueurs:s.joueurs, updated_at:new Date().toISOString()});
+  if (res.error) console.error('saveState:', res.error.message);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PROGRESSION LOCALE PAR JOUEUR
+// ════════════════════════════════════════════════════════════════
+function getMyQIndex() { return parseInt(sessionStorage.getItem('ql_qindex')||'0',10); }
+function setMyQIndex(i){ sessionStorage.setItem('ql_qindex', i); }
+function resetMyQIndex(){ sessionStorage.setItem('ql_qindex','0'); }
+
+function getQUESTIONS() {
+  var m = getState().manche || 1;
+  return (MANCHES[m] && MANCHES[m].questions) ? MANCHES[m].questions : MANCHES[1].questions;
+}
 
 // ════════════════════════════════════════════════════════════════
 //  AUTH
@@ -404,8 +401,7 @@ function switchTab(tab) {
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Enter' && !ME) {
-    var isCo = document.getElementById('tabConnexion').classList.contains('active');
-    isCo ? login() : inscrire();
+    document.getElementById('tabConnexion').classList.contains('active') ? login() : inscrire();
   }
 });
 
@@ -413,10 +409,10 @@ function login() {
   var email = document.getElementById('loginEmail').value.trim().toLowerCase();
   var pass  = document.getElementById('loginPassword').value;
   hideAuthMsg();
-  if (!email || !pass) { showAuthMsg('Remplis tous les champs.', 'error'); return; }
+  if (!email||!pass) { showAuthMsg('Remplis tous les champs.','error'); return; }
   var comptes = getComptes();
-  if (!comptes[email]) { showAuthMsg("Aucun compte trouve. Inscris-toi d'abord.", 'error'); return; }
-  if (comptes[email].password !== pass) { showAuthMsg('Mot de passe incorrect.', 'error'); return; }
+  if (!comptes[email]) { showAuthMsg("Aucun compte. Inscris-toi d'abord.",'error'); return; }
+  if (comptes[email].password !== pass) { showAuthMsg('Mot de passe incorrect.','error'); return; }
   connecter(email, comptes[email].prenom);
 }
 
@@ -426,19 +422,18 @@ function inscrire() {
   var pass   = document.getElementById('regPassword').value;
   var pass2  = document.getElementById('regPassword2').value;
   hideAuthMsg();
-  if (!prenom || !email || !pass || !pass2) { showAuthMsg('Remplis tous les champs.', 'error'); return; }
-  if (pass.length < 6) { showAuthMsg('Mot de passe trop court (6 caracteres min).', 'error'); return; }
-  if (pass !== pass2)  { showAuthMsg('Les mots de passe ne correspondent pas.', 'error'); return; }
-  if (!email.includes('@')) { showAuthMsg('Email invalide.', 'error'); return; }
+  if (!prenom||!email||!pass||!pass2) { showAuthMsg('Remplis tous les champs.','error'); return; }
+  if (pass.length<6)  { showAuthMsg('Mot de passe trop court (6 min).','error'); return; }
+  if (pass!==pass2)   { showAuthMsg('Mots de passe differents.','error'); return; }
+  if (!email.includes('@')) { showAuthMsg('Email invalide.','error'); return; }
   var comptes = getComptes();
-  if (comptes[email]) { showAuthMsg('Un compte existe deja avec cet email.', 'error'); return; }
-  comptes[email] = { prenom: prenom, password: pass };
+  if (comptes[email]) { showAuthMsg('Email deja utilise.','error'); return; }
+  comptes[email] = {prenom:prenom, password:pass};
   saveComptes(comptes);
-  showAuthMsg('Compte cree ! Connecte-toi maintenant ' + prenom + ' !', 'success');
-  setTimeout(function() {
+  showAuthMsg('Compte cree ! Connecte-toi maintenant '+prenom+' !','success');
+  setTimeout(function(){
     switchTab('connexion');
     document.getElementById('loginEmail').value = email;
-    document.getElementById('loginPassword').value = '';
     document.getElementById('loginPassword').focus();
   }, 1500);
 }
@@ -446,13 +441,10 @@ function inscrire() {
 async function connecter(email, prenom) {
   ME = email;
   sessionStorage.setItem('ql_email', ME);
-
-  // Ajouter le joueur dans l'état Supabase
   var s = getState();
-  if (s.joueurs.indexOf(ME) === -1) s.joueurs.push(ME);
-  if (s.scores[ME] === undefined) s.scores[ME] = 0;
+  if (s.joueurs.indexOf(ME)===-1) s.joueurs.push(ME);
+  if (s.scores[ME]===undefined) s.scores[ME] = 0;
   await saveState(s);
-
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('appHeader').style.display = 'flex';
   document.getElementById('appMain').style.display   = 'grid';
@@ -462,7 +454,7 @@ async function connecter(email, prenom) {
 
 async function logout() {
   var s = getState();
-  s.joueurs = s.joueurs.filter(function(j) { return j !== ME; });
+  s.joueurs = s.joueurs.filter(function(j){return j!==ME;});
   await saveState(s);
   ME = null;
   sessionStorage.removeItem('ql_email');
@@ -473,71 +465,41 @@ async function logout() {
 
 function showAuthMsg(msg, type) {
   var el = document.getElementById('authMsg');
-  el.textContent = msg;
-  el.className = 'auth-msg visible ' + type;
+  el.textContent = msg; el.className = 'auth-msg visible '+type;
 }
-function hideAuthMsg() {
-  document.getElementById('authMsg').className = 'auth-msg';
-}
+function hideAuthMsg() { document.getElementById('authMsg').className = 'auth-msg'; }
 
-// ════════════════════════════════════════════════════════════════
-//  SUPABASE CONFIG
-// ════════════════════════════════════════════════════════════════
-var SUPA_URL = 'https://tnitmphgkinzejjvfpys.supabase.co';
-var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuaXRtcGhna2luemVqanZmcHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0ODAxOTAsImV4cCI6MjA5MTA1NjE5MH0.TePyh3OQxDfvBceCknLx4DKb5sLgemnuiBpMH3Do7rc';
-var _supaLib = window.supabase || window.supabaseJs;
-var supabase = _supaLib.createClient(SUPA_URL, SUPA_KEY);
-
-// État local (cache)
-var _state = null;
-
-function defaultState() {
-  return { statut:'attente', questionIndex:0, manche:1, scores:{}, joueurs:[] };
-}
-
-function getState() {
-  return _state || defaultState();
-}
-
-async function saveState(s) {
-  _state = s;
-  await supabase.from('game_state').upsert({
-    id: 1,
-    statut: s.statut,
-    question_index: s.questionIndex,
-    manche: s.manche || 1,
-    scores: s.scores,
-    joueurs: s.joueurs,
-    updated_at: new Date().toISOString()
-  });
-}
-
-function supaRowToState(row) {
-  return {
-    statut:        row.statut        || 'attente',
-    questionIndex: row.question_index || 0,
-    manche:        row.manche        || 1,
-    scores:        row.scores        || {},
-    joueurs:       row.joueurs       || []
-  };
-}
-
-// ════════════════════════════════════════════════════════════════
-//  COMPTES (localStorage — Auth Supabase optionnel plus tard)
-// ════════════════════════════════════════════════════════════════
-function getComptes() {
-  try { return JSON.parse(localStorage.getItem('ql_comptes')) || {}; } catch(e) { return {}; }
-}
+function getComptes() { try{return JSON.parse(localStorage.getItem('ql_comptes'))||{};}catch(e){return {};} }
 function saveComptes(c) { localStorage.setItem('ql_comptes', JSON.stringify(c)); }
 
-function getQUESTIONS() {
-  var s = getState();
-  var m = s.manche || 1;
-  return (MANCHES[m] && MANCHES[m].questions) ? MANCHES[m].questions : MANCHES[1].questions;
+// ════════════════════════════════════════════════════════════════
+//  MODAL PSEUDO
+// ════════════════════════════════════════════════════════════════
+function ouvrirModalPseudo() {
+  var comptes = getComptes();
+  var prenom = comptes[ME] ? comptes[ME].prenom : ME.split('@')[0];
+  document.getElementById('inputPseudo').value = prenom;
+  document.getElementById('modal-pseudo').classList.add('active');
+  setTimeout(function(){ document.getElementById('inputPseudo').focus(); }, 100);
 }
+function fermerModalPseudo() {
+  document.getElementById('modal-pseudo').classList.remove('active');
+}
+function sauverPseudo() {
+  var nouveau = document.getElementById('inputPseudo').value.trim();
+  if (!nouveau) return;
+  var comptes = getComptes();
+  if (comptes[ME]) comptes[ME].prenom = nouveau;
+  saveComptes(comptes);
+  document.getElementById('hdrPlayer').textContent = nouveau;
+  fermerModalPseudo();
+  renderLeaderboard(getState().scores);
+}
+document.getElementById('modal-pseudo').addEventListener('click', function(e){ if(e.target===this) fermerModalPseudo(); });
+document.getElementById('inputPseudo').addEventListener('keydown', function(e){ if(e.key==='Enter') sauverPseudo(); if(e.key==='Escape') fermerModalPseudo(); });
 
 // ════════════════════════════════════════════════════════════════
-//  COUNTDOWN
+//  COUNTDOWN 3s ENTRE QUESTIONS
 // ════════════════════════════════════════════════════════════════
 var countdownActive = false;
 
@@ -549,68 +511,186 @@ function lancerCountdown(callback) {
   var compte  = 3;
   overlay.classList.add('active');
   num.textContent = compte;
-  // Relancer l'animation CSS à chaque chiffre
-  num.style.animation = 'none';
-  num.offsetHeight; // reflow
-  num.style.animation = '';
-
-  var interval = setInterval(function() {
+  num.style.animation = 'none'; num.offsetHeight; num.style.animation = '';
+  var iv = setInterval(function(){
     compte--;
-    if (compte <= 0) {
-      clearInterval(interval);
-      overlay.classList.remove('active');
-      countdownActive = false;
-      if (callback) callback();
-    } else {
-      num.textContent = compte;
-      num.style.animation = 'none';
-      num.offsetHeight;
-      num.style.animation = '';
+    if (compte<=0) { clearInterval(iv); overlay.classList.remove('active'); countdownActive=false; if(callback) callback(); }
+    else { num.textContent=compte; num.style.animation='none'; num.offsetHeight; num.style.animation=''; }
+  }, 1000);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SONS (Web Audio API — pas de fichiers externes)
+// ════════════════════════════════════════════════════════════════
+var audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function jouerSon(notes, type, volume) {
+  // notes = [{freq, dur, delay}]
+  try {
+    var ctx = getAudioCtx();
+    notes.forEach(function(n) {
+      var osc  = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(n.freq, ctx.currentTime + (n.delay||0));
+      gain.gain.setValueAtTime(volume||0.3, ctx.currentTime + (n.delay||0));
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (n.delay||0) + n.dur);
+      osc.start(ctx.currentTime + (n.delay||0));
+      osc.stop(ctx.currentTime  + (n.delay||0) + n.dur);
+    });
+  } catch(e) {}
+}
+
+function sonBonneReponse() {
+  // Accord joyeux montant : Do Mi Sol
+  jouerSon([
+    {freq:523, dur:0.15, delay:0},
+    {freq:659, dur:0.15, delay:0.1},
+    {freq:784, dur:0.3,  delay:0.2}
+  ], 'sine', 0.25);
+}
+
+function sonMauvaiseReponse() {
+  // Son grave descendant
+  jouerSon([
+    {freq:300, dur:0.15, delay:0},
+    {freq:200, dur:0.3,  delay:0.12}
+  ], 'sawtooth', 0.2);
+}
+
+function sonTimerBip() {
+  // Bip court et sec
+  jouerSon([{freq:880, dur:0.08, delay:0}], 'square', 0.15);
+}
+
+function sonTimerUrgent() {
+  // Double bip urgent
+  jouerSon([
+    {freq:1100, dur:0.07, delay:0},
+    {freq:1100, dur:0.07, delay:0.12}
+  ], 'square', 0.2);
+}
+
+function sonTempsEcoule() {
+  // Son d'alarme descendant
+  jouerSon([
+    {freq:600, dur:0.1, delay:0},
+    {freq:500, dur:0.1, delay:0.1},
+    {freq:400, dur:0.2, delay:0.2}
+  ], 'sawtooth', 0.25);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TIMER 15s PAR JOUEUR
+// ════════════════════════════════════════════════════════════════
+var timerInterval = null;
+var timerSecondes = 15;
+var DUREE_TIMER   = 15;
+
+function demarrerTimer() {
+  arreterTimer();
+  timerSecondes = DUREE_TIMER;
+  majTimerUI();
+  timerInterval = setInterval(function(){
+    timerSecondes--;
+    majTimerUI();
+
+    // Sons du timer
+    if (timerSecondes > 0 && !hasAnswered) {
+      if (timerSecondes <= 4) {
+        sonTimerUrgent();   // double bip urgent dans les 4 dernières secondes
+      } else if (timerSecondes <= 8) {
+        sonTimerBip();      // bip simple à partir de 8s
+      }
+    }
+
+    if (timerSecondes<=0) {
+      arreterTimer();
+      if (!hasAnswered) {
+        hasAnswered = true;
+        sonTempsEcoule();
+        document.querySelectorAll('.opt').forEach(function(b){b.disabled=true;});
+        var inp = document.getElementById('texteInput'); if(inp) inp.disabled=true;
+        var btn = document.getElementById('btnSubmitTexte'); if(btn) btn.disabled=true;
+        showFlash('⏰ Temps ecoulé ! Prochaine question…','wait');
+      }
+      setTimeout(function(){ passerQuestionSuivante(); }, 1500);
     }
   }, 1000);
+}
+
+function arreterTimer() { if(timerInterval){clearInterval(timerInterval);timerInterval=null;} }
+
+function majTimerUI() {
+  var fill = document.getElementById('timerFill');
+  var num  = document.getElementById('timerNum');
+  if (!fill||!num) return;
+  fill.style.width = (timerSecondes/DUREE_TIMER*100)+'%';
+  num.textContent  = timerSecondes;
+  var cl = timerSecondes>8 ? '' : (timerSecondes>4 ? ' warn' : ' danger');
+  fill.className = 'timer-fill'+cl;
+  num.className  = 'timer-num'+cl;
+}
+
+async function passerQuestionSuivante() {
+  arreterTimer();
+  var idx       = getMyQIndex();
+  var questions = getQUESTIONS();
+  if (idx+1 >= questions.length) {
+    showFlash('🎉 Tu as repondu a toutes les questions ! En attente de la fin…','wait');
+    return;
+  }
+  lancerCountdown(function(){
+    setMyQIndex(idx+1);
+    renderQuestion();
+    renderLeaderboard(getState().scores);
+  });
 }
 
 // ════════════════════════════════════════════════════════════════
 //  RENDU
 // ════════════════════════════════════════════════════════════════
-var lastStatut    = null;
-var lastQIndex    = -1;
-var hasAnswered   = false;
+var lastStatut  = null;
+var hasAnswered = false;
 
 function renderState() {
   if (!ME) return;
   var s = getState();
 
   if (s.statut === 'attente') {
+    arreterTimer();
     lastStatut = 'attente';
     showScreen('wait');
     renderJoueurs(s.joueurs);
 
   } else if (s.statut === 'en_cours') {
-    var idx = s.questionIndex;
+    var idx = getMyQIndex();
+    var questions = getQUESTIONS();
 
-    // Nouvelle question détectée → countdown avant d'afficher
-    if (idx !== lastQIndex && lastQIndex !== -1 && !countdownActive) {
-      lastQIndex = idx; // marquer tout de suite pour éviter double déclenchement
-      lancerCountdown(function() {
-        showScreen('game');
-        renderQuestion(getState());
-        renderLeaderboard(getState().scores);
-      });
-    } else if (lastQIndex === -1) {
-      // Première question : pas de countdown, affichage direct
-      lastQIndex = idx;
+    if (idx >= questions.length) {
+      showFlash('🎉 Tu as termine ! En attente des autres…','wait');
+      arreterTimer();
+      return;
+    }
+
+    if (lastStatut !== 'en_cours') {
+      lastStatut = 'en_cours';
       showScreen('game');
-      renderQuestion(s);
+      renderQuestion();
       renderLeaderboard(s.scores);
     } else {
-      // Même question, juste mettre à jour le leaderboard
-      showScreen('game');
       renderLeaderboard(s.scores);
     }
-    lastStatut = 'en_cours';
 
   } else if (s.statut === 'termine') {
+    arreterTimer();
     lastStatut = 'termine';
     showScreen('end');
     renderEnd(s.scores);
@@ -618,51 +698,53 @@ function renderState() {
 }
 
 function showScreen(name) {
-  document.getElementById('screen-wait').classList.toggle('active', name === 'wait');
-  document.getElementById('screen-game').classList.toggle('active', name === 'game');
-  document.getElementById('screen-end').classList.toggle('active',  name === 'end');
+  if (name!=='game') arreterTimer();
+  document.getElementById('screen-wait').classList.toggle('active', name==='wait');
+  document.getElementById('screen-game').classList.toggle('active', name==='game');
+  document.getElementById('screen-end').classList.toggle('active',  name==='end');
 }
 
 function renderJoueurs(liste) {
   var comptes = getComptes();
-  document.getElementById('playersChips').innerHTML = liste.map(function(j) {
-    var nom = (comptes[j] && comptes[j].prenom) ? comptes[j].prenom : j.split('@')[0];
-    return '<div class="p-chip' + (j === ME ? ' me' : '') + '">' + (j === ME ? '👤 ' : '') + nom + '</div>';
+  document.getElementById('playersChips').innerHTML = liste.map(function(j){
+    var nom = (comptes[j]&&comptes[j].prenom) ? comptes[j].prenom : j.split('@')[0];
+    return '<div class="p-chip'+(j===ME?' me':'')+'">'+( j===ME?'👤 ':'')+nom+'</div>';
   }).join('');
 }
 
-function renderQuestion(s) {
-  var idx       = s.questionIndex;
+function renderQuestion() {
+  var idx       = getMyQIndex();
   var questions = getQUESTIONS();
   var q         = questions[idx];
   if (!q) return;
 
   hasAnswered = false;
   hideFlash();
+  demarrerTimer();
 
-  document.getElementById('hdrCounter').textContent   = 'Q ' + (idx+1) + ' / ' + questions.length;
-  document.getElementById('progressFill').style.width = ((idx+1)/questions.length*100) + '%';
-  document.getElementById('progressNum').textContent  = (idx+1) + ' / ' + questions.length;
+  document.getElementById('hdrCounter').textContent   = 'Q '+(idx+1)+' / '+questions.length;
+  document.getElementById('progressFill').style.width = ((idx+1)/questions.length*100)+'%';
+  document.getElementById('progressNum').textContent  = (idx+1)+' / '+questions.length;
   document.getElementById('qTag').textContent         = q.cat;
-  document.getElementById('qText').textContent        = q.titre + ' — ' + q.q;
+  document.getElementById('qText').textContent        = q.titre+' — '+q.q;
 
   var grid = document.getElementById('optionsGrid');
   grid.innerHTML = '';
 
-  if (q.type === 'texte') {
+  if (q.type==='texte') {
     var wrap = document.createElement('div');
     wrap.className = 'texte-wrap';
     wrap.innerHTML =
-      '<div class="texte-indice">💡 ' + q.indice + '</div>' +
-      '<textarea class="texte-input" id="texteInput" placeholder="' + (q.placeholder||'Ta reponse…') + '" rows="5"></textarea>' +
+      '<div class="texte-indice">💡 '+q.indice+'</div>'+
+      '<textarea class="texte-input" id="texteInput" placeholder="'+(q.placeholder||'Ta reponse…')+'" rows="5"></textarea>'+
       '<button class="btn-submit" id="btnSubmitTexte" onclick="repondreTexte()">Valider ma reponse →</button>';
     grid.appendChild(wrap);
   } else {
-    q.opts.forEach(function(opt, i) {
+    q.opts.forEach(function(opt,i){
       var btn = document.createElement('button');
       btn.className = 'opt';
-      btn.innerHTML = '<span class="opt-badge">' + LETTRES[i] + '</span><span>' + opt + '</span>';
-      btn.onclick = (function(l, b) { return function() { repondre(l, b); }; })(LETTRES[i], btn);
+      btn.innerHTML = '<span class="opt-badge">'+LETTRES[i]+'</span><span>'+opt+'</span>';
+      btn.onclick = (function(l,b){return function(){repondre(l,b);};})(LETTRES[i],btn);
       grid.appendChild(btn);
     });
   }
@@ -671,19 +753,24 @@ function renderQuestion(s) {
 async function repondre(lettre, btnEl) {
   if (hasAnswered) return;
   hasAnswered = true;
-  document.querySelectorAll('.opt').forEach(function(b) { b.disabled = true; });
-  var s = getState();
-  var q = getQUESTIONS()[s.questionIndex];
-  if (lettre === q.rep) {
+  arreterTimer();
+  document.querySelectorAll('.opt').forEach(function(b){b.disabled=true;});
+  var idx = getMyQIndex();
+  var q   = getQUESTIONS()[idx];
+  if (lettre===q.rep) {
     btnEl.classList.add('correct');
-    showFlash('✅ Bonne reponse ! +10 pts — En attente de la prochaine question…', 'correct');
+    sonBonneReponse();
+    showFlash('✅ Bonne reponse ! +10 pts','correct');
     var ns = getState();
-    ns.scores[ME] = (ns.scores[ME] || 0) + 10;
+    ns.scores[ME] = (ns.scores[ME]||0)+10;
     await saveState(ns);
     renderLeaderboard(ns.scores);
+    setTimeout(function(){passerQuestionSuivante();},1500);
   } else {
     btnEl.classList.add('wrong');
-    showFlash('❌ Mauvaise reponse. Attends la prochaine question…', 'wrong');
+    sonMauvaiseReponse();
+    showFlash('❌ Mauvaise reponse. Prochaine question dans quelques secondes…','wrong');
+    setTimeout(function(){passerQuestionSuivante();},2000);
   }
 }
 
@@ -692,143 +779,116 @@ async function repondreTexte() {
   var input = document.getElementById('texteInput');
   if (!input) return;
   var saisie = input.value.trim();
-  if (!saisie) { showFlash('✏️ Ecris ta reponse avant de valider.', 'wait'); return; }
+  if (!saisie) { showFlash('✏️ Ecris ta reponse avant de valider.','wait'); return; }
   hasAnswered = true;
+  arreterTimer();
   input.disabled = true;
-  var btn = document.getElementById('btnSubmitTexte');
-  if (btn) btn.disabled = true;
-  var s  = getState();
-  var q  = getQUESTIONS()[s.questionIndex];
-  if (validerTexte(saisie, q)) {
-    showFlash('✅ Bonne reponse ! +10 pts — En attente de la prochaine question…', 'correct');
+  var btn = document.getElementById('btnSubmitTexte'); if(btn) btn.disabled=true;
+  var idx = getMyQIndex();
+  var q   = getQUESTIONS()[idx];
+  if (validerTexte(saisie,q)) {
+    showFlash('✅ Bonne reponse ! +10 pts','correct');
+    sonBonneReponse();
     var ns = getState();
-    ns.scores[ME] = (ns.scores[ME] || 0) + 10;
+    ns.scores[ME] = (ns.scores[ME]||0)+10;
     await saveState(ns);
     renderLeaderboard(ns.scores);
+    setTimeout(function(){passerQuestionSuivante();},1500);
   } else {
-    showFlash('❌ Mauvaise reponse. Attends la prochaine question…', 'wrong');
+    showFlash('❌ Mauvaise reponse. Prochaine question dans quelques secondes…','wrong');
+    sonMauvaiseReponse();
+    setTimeout(function(){passerQuestionSuivante();},2000);
   }
 }
 
+// ════════════════════════════════════════════════════════════════
+//  VALIDATION TEXTE LIBRE
+// ════════════════════════════════════════════════════════════════
 function normaliser(str) {
-  // Minuscules + suppression accents + suppression ponctuation
-  return str.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/g, '')
-    .trim();
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,'').trim();
 }
 
 function validerTexte(saisie, q) {
-  // Découper en lignes, normaliser chacune, ignorer les lignes vides
-  var lignes = saisie.split(/\n/).map(normaliser).filter(function(l) { return l.length > 0; });
-  // On normalise aussi la saisie entière pour le mode un_nom
-  var saisieTotale = normaliser(saisie);
-  var mode = q.modeTexte;
-
-  if (mode === 'trois_noms_complets') {
-    // Chaque candidat doit apparaître sur AU MOINS UNE ligne — n'importe quel ordre
-    return q.repTexte.every(function(rep) {
-      return lignes.some(function(ligne) {
-        return rep.tokens.every(function(tok) {
-          return ligne.indexOf(normaliser(tok)) !== -1;
-        });
-      });
+  var lignes = saisie.split(/\n/).map(normaliser).filter(function(l){return l.length>0;});
+  var mode   = q.modeTexte;
+  if (mode==='trois_noms_complets') {
+    return q.repTexte.every(function(rep){
+      return lignes.some(function(ligne){ return rep.tokens.every(function(tok){return ligne.indexOf(normaliser(tok))!==-1;}); });
     });
   }
-
-  if (mode === 'cinq_noms') {
-    // Chaque nom doit apparaître sur au moins une ligne — n'importe quel ordre
-    var trouves = q.repTexte.filter(function(rep) {
-      return lignes.some(function(ligne) {
-        return rep.tokens.every(function(tok) {
-          return ligne.indexOf(normaliser(tok)) !== -1;
-        });
-      });
+  if (mode==='cinq_noms') {
+    var trouves = q.repTexte.filter(function(rep){
+      return lignes.some(function(ligne){ return rep.tokens.every(function(tok){return ligne.indexOf(normaliser(tok))!==-1;}); });
     });
-    return trouves.length >= 5;
+    return trouves.length>=5;
   }
-
-  if (mode === 'un_nom') {
-    // Nom + prénom dans la saisie globale
-    return q.repTexte[0].tokens.every(function(tok) {
-      return saisieTotale.indexOf(normaliser(tok)) !== -1;
-    });
+  if (mode==='un_nom') {
+    var n = normaliser(saisie);
+    return q.repTexte[0].tokens.every(function(tok){return n.indexOf(normaliser(tok))!==-1;});
   }
-
   return false;
 }
 
+// ════════════════════════════════════════════════════════════════
+//  LEADERBOARD & FIN
+// ════════════════════════════════════════════════════════════════
 function renderLeaderboard(scores) {
   var comptes = getComptes();
-  var arr = Object.keys(scores).map(function(e) {
-    return { email:e, nom:(comptes[e] && comptes[e].prenom) ? comptes[e].prenom : e.split('@')[0], pts:scores[e] };
-  }).sort(function(a,b) { return b.pts - a.pts; });
+  var arr = Object.keys(scores).map(function(e){
+    return {email:e, nom:(comptes[e]&&comptes[e].prenom)?comptes[e].prenom:e.split('@')[0], pts:scores[e]};
+  }).sort(function(a,b){return b.pts-a.pts;});
   var medals = ['🥇','🥈','🥉'];
-  document.getElementById('lbList').innerHTML = arr.map(function(s,i) {
-    var isMe = s.email === ME;
-    return '<div class="lb-row' + (isMe?' me':'') + '">' +
-      '<span class="lb-rank">' + (medals[i]||i+1) + '</span>' +
-      '<span class="lb-name">' + (isMe?'<b>'+s.nom+'</b>':s.nom) + '</span>' +
-      '<span class="lb-pts">' + s.pts + ' pts</span></div>';
+  document.getElementById('lbList').innerHTML = arr.map(function(s,i){
+    var isMe = s.email===ME;
+    return '<div class="lb-row'+(isMe?' me':'')+'">'+
+      '<span class="lb-rank">'+(medals[i]||i+1)+'</span>'+
+      '<span class="lb-name">'+(isMe?'<b>'+s.nom+'</b>':s.nom)+'</span>'+
+      '<span class="lb-pts">'+s.pts+' pts</span></div>';
   }).join('');
 }
 
 function renderEnd(scores) {
   var comptes = getComptes();
-  var arr = Object.keys(scores).map(function(e) {
-    return { email:e, nom:(comptes[e] && comptes[e].prenom) ? comptes[e].prenom : e.split('@')[0], pts:scores[e] };
-  }).sort(function(a,b) { return b.pts - a.pts; });
+  var arr = Object.keys(scores).map(function(e){
+    return {email:e, nom:(comptes[e]&&comptes[e].prenom)?comptes[e].prenom:e.split('@')[0], pts:scores[e]};
+  }).sort(function(a,b){return b.pts-a.pts;});
   var medals = ['🥇','🥈','🥉'];
-  document.getElementById('podium').innerHTML = arr.map(function(s,i) {
-    var isMe = s.email === ME;
-    return '<div class="podium-row">' +
-      '<span class="podium-medal">' + (medals[i]||'🏅') + '</span>' +
-      '<span class="podium-name">' + (isMe?'<b>'+s.nom+'</b>':s.nom) + '</span>' +
-      '<span class="podium-score">' + s.pts + ' pts</span></div>';
+  document.getElementById('podium').innerHTML = arr.map(function(s,i){
+    var isMe = s.email===ME;
+    return '<div class="podium-row">'+
+      '<span class="podium-medal">'+(medals[i]||'🏅')+'</span>'+
+      '<span class="podium-name">'+(isMe?'<b>'+s.nom+'</b>':s.nom)+'</span>'+
+      '<span class="podium-score">'+s.pts+' pts</span></div>';
   }).join('');
 }
 
-function showFlash(msg, type) {
-  var el = document.getElementById('flash');
-  el.textContent = msg; el.className = 'flash active ' + type;
-}
-function hideFlash() { document.getElementById('flash').className = 'flash'; }
+function showFlash(msg,type){var el=document.getElementById('flash');el.textContent=msg;el.className='flash active '+type;}
+function hideFlash(){document.getElementById('flash').className='flash';}
 
 // ════════════════════════════════════════════════════════════════
-//  SUPABASE REALTIME + DÉMARRAGE
+//  INIT SUPABASE
 // ════════════════════════════════════════════════════════════════
 async function init() {
-  // 1. Charger l'état initial
-  var res = await supabase.from('game_state').select('*').eq('id', 1).single();
-  if (res.data) {
-    _state = supaRowToState(res.data);
-  }
+  var res = await sb.from('game_state').select('*').eq('id',1).single();
+  if (res.data) _state = rowToState(res.data);
 
-  // 2. S'abonner aux changements en temps réel
-  supabase.channel('game_state_changes')
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'game_state'
-    }, function(payload) {
-      var ancien = _state ? _state.questionIndex : -1;
-      _state = supaRowToState(payload.new);
-      // Si la question a changé, renderState détectera le nouveau index
+  sb.channel('game_state_changes')
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'game_state'}, function(payload){
+      var ancienStatut = _state ? _state.statut : 'attente';
+      _state = rowToState(payload.new);
+      if (ancienStatut==='attente' && _state.statut==='en_cours') {
+        resetMyQIndex();
+        lastStatut = null;
+      }
       renderState();
     })
     .subscribe();
 
-  // 3. Restaurer session si déjà connecté
   var savedEmail = sessionStorage.getItem('ql_email');
   if (savedEmail) {
     var comptes = getComptes();
-    if (comptes[savedEmail]) {
-      connecter(savedEmail, comptes[savedEmail].prenom);
-      return;
-    }
+    if (comptes[savedEmail]) { connecter(savedEmail, comptes[savedEmail].prenom); return; }
   }
-
-  // Sinon afficher le login
   document.getElementById('screen-login').classList.add('active');
 }
 

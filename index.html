@@ -376,11 +376,27 @@ async function saveState(s) {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  PROGRESSION LOCALE PAR JOUEUR
+//  PROGRESSION LOCALE PAR JOUEUR (localStorage = survit au refresh)
 // ════════════════════════════════════════════════════════════════
-function getMyQIndex() { return parseInt(sessionStorage.getItem('ql_qindex')||'0',10); }
-function setMyQIndex(i){ sessionStorage.setItem('ql_qindex', i); }
-function resetMyQIndex(){ sessionStorage.setItem('ql_qindex','0'); }
+function getMyQIndex() { return parseInt(localStorage.getItem('ql_qindex_'+ME)||'0',10); }
+function setMyQIndex(i){
+  localStorage.setItem('ql_qindex_'+ME, i);
+  // Réinitialiser le timestamp du timer pour la nouvelle question
+  var expireAt = Date.now() + DUREE_TIMER * 1000;
+  localStorage.setItem('ql_timer_end_'+ME, expireAt);
+}
+function resetMyQIndex(){
+  localStorage.setItem('ql_qindex_'+ME, '0');
+  var expireAt = Date.now() + DUREE_TIMER * 1000;
+  localStorage.setItem('ql_timer_end_'+ME, expireAt);
+}
+
+// Retourne le temps restant en secondes (peut être négatif si expiré)
+function getTempsRestant() {
+  var end = parseInt(localStorage.getItem('ql_timer_end_'+ME)||'0', 10);
+  if (!end) return DUREE_TIMER;
+  return Math.ceil((end - Date.now()) / 1000);
+}
 
 function getQUESTIONS() {
   var m = getState().manche || 1;
@@ -594,9 +610,29 @@ var timerInterval = null;
 var timerSecondes = 15;
 var DUREE_TIMER   = 15;
 
-function demarrerTimer() {
+function demarrerTimer(reprendreTemps) {
   arreterTimer();
-  timerSecondes = DUREE_TIMER;
+
+  if (reprendreTemps) {
+    // Reprendre depuis le timestamp sauvegardé (anti-triche refresh)
+    var restant = getTempsRestant();
+    if (restant <= 0) {
+      // Temps déjà écoulé pendant le refresh → passer directement
+      hasAnswered = true;
+      document.querySelectorAll('.opt').forEach(function(b){b.disabled=true;});
+      var inp = document.getElementById('texteInput'); if(inp) inp.disabled=true;
+      var btn = document.getElementById('btnSubmitTexte'); if(btn) btn.disabled=true;
+      showFlash('⏰ Temps ecoulé pendant le rechargement ! Passage automatique…','wait');
+      setTimeout(function(){ passerQuestionSuivante(); }, 1500);
+      return;
+    }
+    timerSecondes = restant;
+  } else {
+    // Nouvelle question → timer complet + sauvegarder le timestamp
+    timerSecondes = DUREE_TIMER;
+    localStorage.setItem('ql_timer_end_'+ME, Date.now() + DUREE_TIMER * 1000);
+  }
+
   majTimerUI();
   timerInterval = setInterval(function(){
     timerSecondes--;
@@ -604,11 +640,8 @@ function demarrerTimer() {
 
     // Sons du timer
     if (timerSecondes > 0 && !hasAnswered) {
-      if (timerSecondes <= 4) {
-        sonTimerUrgent();   // double bip urgent dans les 4 dernières secondes
-      } else if (timerSecondes <= 8) {
-        sonTimerBip();      // bip simple à partir de 8s
-      }
+      if (timerSecondes <= 4)      sonTimerUrgent();
+      else if (timerSecondes <= 8) sonTimerBip();
     }
 
     if (timerSecondes<=0) {
@@ -648,8 +681,8 @@ async function passerQuestionSuivante() {
     return;
   }
   lancerCountdown(function(){
-    setMyQIndex(idx+1);
-    renderQuestion();
+    setMyQIndex(idx+1); // setMyQIndex sauvegarde aussi le nouveau timestamp
+    renderQuestion(false); // false = timer complet pour la nouvelle question
     renderLeaderboard(getState().scores);
   });
 }
@@ -683,7 +716,8 @@ function renderState() {
     if (lastStatut !== 'en_cours') {
       lastStatut = 'en_cours';
       showScreen('game');
-      renderQuestion();
+      // true = reprendre le timer là où il était (anti-triche refresh)
+      renderQuestion(true);
       renderLeaderboard(s.scores);
     } else {
       renderLeaderboard(s.scores);
@@ -712,7 +746,7 @@ function renderJoueurs(liste) {
   }).join('');
 }
 
-function renderQuestion() {
+function renderQuestion(reprendreTemps) {
   var idx       = getMyQIndex();
   var questions = getQUESTIONS();
   var q         = questions[idx];
@@ -720,7 +754,7 @@ function renderQuestion() {
 
   hasAnswered = false;
   hideFlash();
-  demarrerTimer();
+  demarrerTimer(reprendreTemps || false);
 
   document.getElementById('hdrCounter').textContent   = 'Q '+(idx+1)+' / '+questions.length;
   document.getElementById('progressFill').style.width = ((idx+1)/questions.length*100)+'%';
@@ -877,7 +911,15 @@ async function init() {
       var ancienStatut = _state ? _state.statut : 'attente';
       _state = rowToState(payload.new);
       if (ancienStatut==='attente' && _state.statut==='en_cours') {
-        resetMyQIndex();
+        resetMyQIndex(); // repart à Q1 avec timer frais
+        lastStatut = null;
+      }
+      // Si la partie repasse en attente (réinit admin), effacer la progression
+      if (ancienStatut==='en_cours' && _state.statut==='attente') {
+        if (ME) {
+          localStorage.removeItem('ql_qindex_'+ME);
+          localStorage.removeItem('ql_timer_end_'+ME);
+        }
         lastStatut = null;
       }
       renderState();

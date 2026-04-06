@@ -18,6 +18,32 @@
     body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
     body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:999;}
 
+    /* TRANSITION MANCHE */
+    #manche-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(8,9,14,0.95); backdrop-filter: blur(10px);
+      z-index: 500; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px; text-align: center; padding: 20px;
+    }
+    #manche-overlay.active { display: flex; }
+    .manche-badge {
+      font-size: 3rem; margin-bottom: 8px;
+      animation: manchePop 0.5s ease;
+    }
+    @keyframes manchePop { 0%{transform:scale(0.5);opacity:0} 70%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+    .manche-titre {
+      font-family: 'Syne', sans-serif; font-weight: 900;
+      font-size: clamp(1.4rem, 4vw, 2rem); margin-bottom: 6px;
+    }
+    .manche-sous { color: var(--muted); font-size: 0.95rem; margin-bottom: 28px; }
+    .manche-compte {
+      font-family: 'Syne', sans-serif; font-weight: 900;
+      font-size: 4.5rem; color: var(--green);
+      text-shadow: 0 0 30px rgba(52,211,153,0.5);
+      line-height: 1; animation: cdPop 1s ease forwards;
+    }
+    .manche-label { font-size: 0.82rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; }
+
     /* COUNTDOWN */
     #countdown-overlay{display:none;position:fixed;inset:0;background:rgba(8,9,14,0.92);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
     #countdown-overlay.active{display:flex;}
@@ -165,6 +191,15 @@
   </style>
 </head>
 <body>
+
+<!-- TRANSITION MANCHE -->
+<div id="manche-overlay">
+  <div class="manche-badge" id="mancheBadge">🏁</div>
+  <div class="manche-titre" id="mancheTitre">Manche terminée !</div>
+  <div class="manche-sous" id="mancheSous">Prochaine manche</div>
+  <div class="manche-compte" id="mancheCompte">3</div>
+  <div class="manche-label">secondes</div>
+</div>
 
 <!-- COUNTDOWN -->
 <div id="countdown-overlay">
@@ -676,15 +711,71 @@ async function passerQuestionSuivante() {
   arreterTimer();
   var idx       = getMyQIndex();
   var questions = getQUESTIONS();
-  if (idx+1 >= questions.length) {
-    showFlash('🎉 Tu as repondu a toutes les questions ! En attente de la fin…','wait');
+
+  if (idx + 1 >= questions.length) {
+    // Fin de la manche → vérifier s'il y a une manche suivante
+    var mancheActuelle = getState().manche || 1;
+    var mancheSuivante = mancheActuelle + 1;
+
+    if (MANCHES[mancheSuivante]) {
+      // Il y a une manche suivante → transition automatique
+      lancerTransitionManche(mancheActuelle, mancheSuivante);
+    } else {
+      // Dernière manche → fin de partie pour ce joueur
+      showFlash('🎉 Bravo ! Tu as termine toutes les manches !', 'correct');
+    }
     return;
   }
+
+  // Question suivante dans la même manche
   lancerCountdown(function(){
-    setMyQIndex(idx+1); // setMyQIndex sauvegarde aussi le nouveau timestamp
-    renderQuestion(false); // false = timer complet pour la nouvelle question
+    setMyQIndex(idx + 1);
+    renderQuestion(false);
     renderLeaderboard(getState().scores);
   });
+}
+
+function lancerTransitionManche(mancheActuelle, mancheSuivante) {
+  var infos = {
+    1: { emoji: '🧠', nom: 'Culture Générale & Sciences' },
+    2: { emoji: '🔥', nom: 'INPHB & Le Flambeau' },
+    3: { emoji: '🎓', nom: 'Connais-tu ta promo BCPST ?' }
+  };
+
+  var overlay  = document.getElementById('manche-overlay');
+  var badge    = document.getElementById('mancheBadge');
+  var titre    = document.getElementById('mancheTitre');
+  var sous     = document.getElementById('mancheSous');
+  var compteEl = document.getElementById('mancheCompte');
+  var info     = infos[mancheSuivante] || {emoji:'🎮', nom:'Manche '+mancheSuivante};
+
+  badge.textContent = info.emoji;
+  titre.textContent = 'Manche ' + mancheActuelle + ' terminée !';
+  sous.textContent  = 'Manche ' + mancheSuivante + ' — ' + info.nom;
+  compteEl.textContent = 3;
+  compteEl.style.animation = 'none'; compteEl.offsetHeight; compteEl.style.animation = '';
+
+  overlay.classList.add('active');
+
+  var compte = 3;
+  var iv = setInterval(function(){
+    compte--;
+    if (compte <= 0) {
+      clearInterval(iv);
+      overlay.classList.remove('active');
+      // Changer de manche localement et repartir à Q1
+      var s = getState();
+      s.manche = mancheSuivante;
+      _state = s;
+      localStorage.setItem('ql_qindex_' + ME, '0');
+      localStorage.setItem('ql_timer_end_' + ME, Date.now() + DUREE_TIMER * 1000);
+      lastStatut = null; // forcer re-render
+      renderState();
+    } else {
+      compteEl.textContent = compte;
+      compteEl.style.animation = 'none'; compteEl.offsetHeight; compteEl.style.animation = '';
+    }
+  }, 1000);
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -938,3 +1029,4 @@ init();
 </script>
 </body>
 </html>
+

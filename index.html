@@ -885,9 +885,16 @@ async function repondre(lettre, btnEl) {
   if (lettre===q.rep) {
     btnEl.classList.add('correct');
     sonBonneReponse();
-    showFlash('✅ Bonne reponse ! +10 pts','correct');
+    // Bonus rapidité : +2 pts si répondu dans les 5 premières secondes
+    var tempsEcoule = DUREE_TIMER - timerSecondes;
+    var bonus = (tempsEcoule <= 5) ? 2 : 0;
+    var pts   = 10 + bonus;
+    var msg   = bonus > 0
+      ? '✅ Bonne réponse ! +10 pts ⚡ +'+bonus+' bonus rapidité !'
+      : '✅ Bonne réponse ! +10 pts';
+    showFlash(msg, 'correct');
     var ns = getState();
-    ns.scores[ME] = (ns.scores[ME]||0)+10;
+    ns.scores[ME] = (ns.scores[ME]||0) + pts;
     await saveState(ns);
     renderLeaderboard(ns.scores);
     setTimeout(function(){passerQuestionSuivante();},1500);
@@ -912,10 +919,16 @@ async function repondreTexte() {
   var idx = getMyQIndex();
   var q   = getQUESTIONS()[idx];
   if (validerTexte(saisie,q)) {
-    showFlash('✅ Bonne reponse ! +10 pts','correct');
     sonBonneReponse();
+    var tempsEcoule = DUREE_TIMER - timerSecondes;
+    var bonus = (tempsEcoule <= 5) ? 2 : 0;
+    var pts   = 10 + bonus;
+    var msg   = bonus > 0
+      ? '✅ Bonne réponse ! +10 pts ⚡ +'+bonus+' bonus rapidité !'
+      : '✅ Bonne réponse ! +10 pts';
+    showFlash(msg, 'correct');
     var ns = getState();
-    ns.scores[ME] = (ns.scores[ME]||0)+10;
+    ns.scores[ME] = (ns.scores[ME]||0) + pts;
     await saveState(ns);
     renderLeaderboard(ns.scores);
     setTimeout(function(){passerQuestionSuivante();},1500);
@@ -1029,4 +1042,3 @@ init();
 </script>
 </body>
 </html>
-
